@@ -20,5 +20,3 @@ const Loading = ({
 };
 
 export default Loading;
-
-const styles = StyleSheet.create({});
