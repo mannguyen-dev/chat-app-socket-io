@@ -11,7 +11,7 @@ export const generateToken = (user: UserProps) => {
     },
   };
 
-  return jwt.sign(payload, process.env.JWT_SECRECT as string, {
+  return jwt.sign(payload, process.env.JWT_SECRET as string, {
     expiresIn: "30d",
   });
 };

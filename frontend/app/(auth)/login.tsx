@@ -17,6 +17,7 @@ import {
 import { verticalScale } from "@/utils/styling";
 import { useRouter } from "expo-router";
 import Button from "@/components/Button";
+import { useAuth } from "@/contexts/authContext";
 
 const Login = () => {
   const emailRef = useRef("");
@@ -24,13 +25,22 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
+  const { signIn } = useAuth();
+
   const handleSubmit = async () => {
     if (!emailRef.current || !passwordRef.current) {
       Alert.alert("Login", "Please fill all the fields");
       return;
     }
     // good to go
-    console.log("submut");
+    try {
+      setIsLoading(true);
+      await signIn(emailRef.current, passwordRef.current);
+    } catch (err: any) {
+      Alert.alert("Login Error", err.message);
+    } finally {
+      setIsLoading(false);
+    }
   };
   return (
     <KeyboardAvoidingView
