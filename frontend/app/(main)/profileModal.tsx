@@ -23,7 +23,7 @@ import Button from "@/components/Button";
 import { useRouter } from "expo-router";
 import { updateProfile } from "@/socket/socketEvents";
 import * as ImagePicker from "expo-image-picker";
-import { getAvatarPath } from "@/services/imageService";
+import { getAvatarPath, uploadFileToCloudinary } from "@/services/imageService";
 
 const ProfileModal = () => {
   const { user, signOut, updateToken } = useAuth();
@@ -60,7 +60,7 @@ const ProfileModal = () => {
     });
   }, []);
 
-  const onSubmit = () => {
+  const onSubmit = async () => {
     let { name, avatar } = userData;
     if (!name.trim()) {
       Alert.alert("User", "Please enter your name");
@@ -70,9 +70,23 @@ const ProfileModal = () => {
     // good to go
     const data = {
       name,
-      avatar: getAvatarPath(userData.avatar),
+      avatar,
     };
-    setLoading(true);
+
+    if (avatar && avatar?.uri) {
+      setLoading(true);
+      const res = await uploadFileToCloudinary(avatar, "profiles");
+      console.log("result: ", res);
+
+      if (res.success) {
+        data.avatar = res.data;
+      } else {
+        Alert.alert("User", res.msg);
+        setLoading(false);
+        return;
+      }
+    }
+
     updateProfile(data);
   };
   const hanldeLogout = async () => {
@@ -176,32 +190,32 @@ const ProfileModal = () => {
               />
             </View>
           </View>
-
-          <View style={styles.footer}>
-            {!loading && (
-              <Button
-                style={{
-                  backgroundColor: colors.rose,
-                  height: verticalScale(56),
-                  width: verticalScale(56),
-                }}
-                onPress={showLogoutAlert}
-              >
-                <Icons.SignOutIcon
-                  weight="bold"
-                  color={colors.white}
-                  size={verticalScale(30)}
-                />
-              </Button>
-            )}
-
-            <Button style={{ flex: 1 }} onPress={onSubmit} loading={loading}>
-              <Typo fontWeight={"bold"} color={colors.black}>
-                Update
-              </Typo>
-            </Button>
-          </View>
         </ScrollView>
+      </View>
+
+      <View style={styles.footer}>
+        {!loading && (
+          <Button
+            style={{
+              backgroundColor: colors.rose,
+              height: verticalScale(56),
+              width: verticalScale(56),
+            }}
+            onPress={showLogoutAlert}
+          >
+            <Icons.SignOutIcon
+              weight="bold"
+              color={colors.white}
+              size={verticalScale(30)}
+            />
+          </Button>
+        )}
+
+        <Button style={{ flex: 1 }} onPress={onSubmit} loading={loading}>
+          <Typo fontWeight={"bold"} color={colors.black}>
+            Update
+          </Typo>
+        </Button>
       </View>
     </ScreenWrapper>
   );
