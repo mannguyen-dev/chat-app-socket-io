@@ -139,7 +139,7 @@ export type MessageProps = {
     avatar: string | null;
   };
   content: string;
-  attachement?: string | null;
+  attachment?: string | null;
   isMe?: boolean;
   createdAt: string;
 };

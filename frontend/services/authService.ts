@@ -10,7 +10,7 @@ export const login = async (
       email,
       password,
     });
-    console.log("debug");
+
     return response.data;
   } catch (err: any) {
     console.log("got error:", err);

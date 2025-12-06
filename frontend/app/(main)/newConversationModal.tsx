@@ -42,7 +42,7 @@ const NewConversationModal = () => {
   }, []);
 
   const processNewConversation = (res: any) => {
-    // console.log("new con: ", res);
+    console.log("new con: ", res.data);
     setIsLoading(false);
     if (res.success) {
       router.back();
