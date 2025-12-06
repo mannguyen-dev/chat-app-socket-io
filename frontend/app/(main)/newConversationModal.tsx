@@ -1,5 +1,5 @@
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import ScreenWrapper from "@/components/ScreenWrapper";
 import Header from "@/components/Header";
@@ -13,18 +13,58 @@ import Typo from "@/components/Typo";
 import { useAuth } from "@/contexts/authContext";
 import Button from "@/components/Button";
 import { verticalScale } from "@/utils/styling";
+import { getContacts, newConversation } from "@/socket/socketEvents";
+import { uploadFileToCloudinary } from "@/services/imageService";
 
 const NewConversationModal = () => {
   const { isGroup } = useLocalSearchParams();
+
   const isGroupMode = isGroup === "1";
   const router = useRouter();
   const [groupName, setGroupName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [contacts, setContacts] = useState([]);
   const [selectedParticipants, setSelectedParticipates] = useState<string[]>(
     []
   );
   const [groupAvatar, setGroupAvatar] = useState<{ uri: string } | null>(null);
   const { user: currentUser } = useAuth();
+
+  useEffect(() => {
+    getContacts(processGetContacts);
+    newConversation(processNewConversation);
+    getContacts(null);
+
+    return () => {
+      getContacts(processGetContacts, true);
+      newConversation(processNewConversation, true);
+    };
+  }, []);
+
+  const processNewConversation = (res: any) => {
+    // console.log("new con: ", res);
+    setIsLoading(false);
+    if (res.success) {
+      router.back();
+      router.push({
+        pathname: "/(main)/conversation",
+        params: {
+          id: res.data._id,
+          name: res.data.name,
+          avatar: res.data.avatar,
+          type: res.data.type,
+          participants: JSON.stringify(res.data.participants),
+        },
+      });
+    }
+  };
+
+  const processGetContacts = (res: any) => {
+    // console.log("get contacts: ", res);
+    if (res.success && Array.isArray(res.data)) {
+      setContacts(res.data);
+    }
+  };
 
   const onPickImage = async () => {
     const permissionResult =
@@ -71,28 +111,46 @@ const NewConversationModal = () => {
     if (isGroupMode) {
       toggleParticipant(user);
     } else {
-      // todo: start a new conversation
+      newConversation({
+        type: "direct",
+        participants: [currentUser.id, user.id],
+      });
     }
   };
 
-  const contacts = [
-    { id: "1", avatar: "", name: "test" },
-    { id: "2", avatar: "", name: "test2" },
-    {
-      id: "3",
-      avatar: "",
-      name: "test3",
-    },
-    {
-      id: "4",
-      avatar: "",
-      name: "test4",
-    },
-  ];
-
   const createGroup = async () => {
-    if (!groupName.trim() || !currentUser || selectedParticipants.length < 2) {
+    if (!groupName.trim()) {
+      Alert.alert("Create Group", "Group Name must not empty!");
       return;
+    }
+
+    if (!currentUser || selectedParticipants.length < 2) {
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      let avatar = null;
+      if (groupAvatar) {
+        const uploadResult = await uploadFileToCloudinary(
+          groupAvatar,
+          "group-avatars"
+        );
+
+        if (uploadResult.success) avatar = uploadResult.data;
+      }
+
+      newConversation({
+        type: "group",
+        participants: [currentUser.id, ...selectedParticipants],
+        name: groupName,
+        avatar,
+      });
+    } catch (err: any) {
+      console.log("Error create conversaion: ", err);
+      Alert.alert("Error", err.message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -130,6 +188,7 @@ const NewConversationModal = () => {
         >
           {contacts.map((user: any, index) => {
             const isSelected = selectedParticipants.includes(user.id);
+
             return (
               <TouchableOpacity
                 key={index}
